@@ -5,6 +5,7 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
+import "./MacroToken.sol";
 
 /// @title Airdrop
 /// @author Melvillian
@@ -16,7 +17,7 @@ import "hardhat/console.sol";
 contract Airdrop is Ownable {
 
     /// @notice Address of the MACRO ERC20 token
-    IERC20 public immutable macroToken;
+    MacroToken public immutable macroToken;
 
     /// @notice A merkle proof used to prove inclusion in a set of airdrop claimer addresses.
     /// Claimers can provide a merkle proof using this merkle root and claim their airdropped
@@ -44,15 +45,15 @@ contract Airdrop is Ownable {
     bytes32 public constant SUPPORT_TYPEHASH = keccak256("Claim(address claimer,uint256 amount)");
 
     /// @notice Sets the necessary initial claimer verification data
-    constructor(bytes32 _root, address _signer, IERC20 _macroToken) {
+    constructor(bytes32 _root, address _signer, MacroToken _macroToken) {
         merkleRoot = _root;
         signer = _signer;
         macroToken = _macroToken;
 
         EIP712_DOMAIN = keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes("Airdrop")),
-                keccak256(bytes("v1")),
+                keccak256(bytes("MacroToken")),
+                keccak256(bytes("1")),
                 block.chainid,
                 address(this)
             ));
@@ -65,9 +66,15 @@ contract Airdrop is Ownable {
     /// @param signature An array of bytes representing a signature created by the
     /// `Airdrop.signer` address
     /// @param _to The address the claimed MACRO should be sent to
-    function signatureClaim(bytes calldata signature, address _to) external {
+    function signatureClaim(bytes calldata signature, address _to, uint256 _amount) external {
         require(!isECDSADisabled, "SIGS_DISABLED");
-        // TODO implement me!
+
+        require(!alreadyClaimed[_to], "Address has already claimed their tokens");
+        address addressCheck = ECDSA.recover(toTypedDataHash(_to, _amount), signature);
+        require(addressCheck == signer, "Wrong Signature");
+        alreadyClaimed[_to] = true;
+        macroToken.mint(_to, _amount);
+
     }
 
     /// @notice Allows a msg.sender to claim their MACRO token by providing a

@@ -1,7 +1,8 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 import { Airdrop, ERC20, MacroToken } from "../typechain-types"
+import airdropList from "./airdroplist.json"
 
 const provider = ethers.provider
 let account1: SignerWithAddress
@@ -11,6 +12,8 @@ let rest: SignerWithAddress[]
 let macroToken: MacroToken
 let airdrop: Airdrop
 let merkleRoot: string
+
+const chainId = hre.network.config.chainId;
 
 describe("Airdrop", function () {
     before(async () => {
@@ -25,8 +28,11 @@ describe("Airdrop", function () {
     })
 
     beforeEach(async () => {
-        airdrop = await (await ethers.getContractFactory("Airdrop")).deploy(merkleRoot, account1.address, macroToken.address)
+        //account2 is signer, different than the deployer who is account1
+        airdrop = await (await ethers.getContractFactory("Airdrop")).deploy(merkleRoot, account2.address, macroToken.address)
         await airdrop.deployed()
+
+        await macroToken.addAirdropOwner(airdrop.address);
     })
 
     describe("setup and disabling ECDSA", () => {
@@ -54,7 +60,44 @@ describe("Airdrop", function () {
 
     describe("Signature claiming", () => {
         it ("TODO", async () => {
-            throw new Error("TODO: add more tests here!")
+            /*
+           EIP712_DOMAIN = keccak256(abi.encode(
+               keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+               keccak256(bytes("MacroToken")),
+               keccak256(bytes("1")),
+               block.chainid,
+               address(this)
+           ));
+            */
+
+            for(const [claimer, amount] of Object.entries(airdropList)) {
+                //EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)
+                const domain = {
+                    name: 'MacroToken',
+                    version: '1',
+                    chainId,
+                    verifyingContract: airdrop.address,
+                };
+
+                //Claim(address claimer,uint256 amount)
+                const types = {
+                    Claim: [
+                        { name: 'claimer', type: 'address' },
+                        { name: 'amount', type: 'uint256' },
+                    ],
+                };
+
+                const values = { claimer, amount };
+
+                //account2 is now the signer, different than the deployer
+                const sig = await account2._signTypedData(domain, types, values);
+
+                await expect(airdrop.signatureClaim(sig, claimer, amount))
+                    .to.emit(macroToken, 'Transfer')
+                    .withArgs(ethers.constants.AddressZero, claimer, amount);
+
+            }
+
         })
     })
 })

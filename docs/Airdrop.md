@@ -97,7 +97,7 @@ true if a claimer is able to call `Airdrop.signatureClaim` without reverting, fa
 ### macroToken
 
 ```solidity
-function macroToken() external view returns (contract IERC20)
+function macroToken() external view returns (contract MacroToken)
 ```
 
 Address of the MACRO ERC20 token
@@ -109,7 +109,7 @@ Address of the MACRO ERC20 token
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | contract IERC20 | undefined |
+| _0 | contract MacroToken | undefined |
 
 ### merkleClaim
 
@@ -176,7 +176,7 @@ function renounceOwnership() external nonpayable
 ### signatureClaim
 
 ```solidity
-function signatureClaim(bytes signature, address _to) external nonpayable
+function signatureClaim(bytes signature, address _to, uint256 _amount) external nonpayable
 ```
 
 Allows a msg.sender to claim their MACRO token by providing a signature signed by the `Airdrop.signer` address.
@@ -189,6 +189,7 @@ Allows a msg.sender to claim their MACRO token by providing a signature signed b
 |---|---|---|
 | signature | bytes | An array of bytes representing a signature created by the `Airdrop.signer` address |
 | _to | address | The address the claimed MACRO should be sent to |
+| _amount | uint256 | undefined |
 
 ### signer
 

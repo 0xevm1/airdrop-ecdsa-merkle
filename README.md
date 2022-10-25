@@ -1,6 +1,8 @@
 ## ERC20 Token Airdrop via ECDSA method and MerkleTree method
 
-Contains a switch to disable ECDSA method, ostensibly in the event that it becomes insecure in the future, 
+
+
+Contains two distinct claiming methods, alongside a switch to disable ECDSA method, ostensibly in the event that it becomes insecure in the future, 
 while retaining the ability for beneficiaries to claim their tokens using the MerkleTree method.
 
 Aside from that, both methods unburden the beneficiaries for needing gas to claim, 
