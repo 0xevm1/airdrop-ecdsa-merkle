@@ -6,6 +6,8 @@ import "hardhat-abi-exporter";
 import "hardhat-contract-sizer";
 import "hardhat-gas-reporter";
 import "@primitivefi/hardhat-dodoc";
+import 'hardhat-tracer';
+import "solidity-coverage"
 import { HardhatUserConfig } from "hardhat/config";
 import { NetworkUserConfig } from "hardhat/types";
 
