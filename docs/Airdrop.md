@@ -114,7 +114,7 @@ Address of the MACRO ERC20 token
 ### merkleClaim
 
 ```solidity
-function merkleClaim(bytes32[] _proof, address _to) external nonpayable
+function merkleClaim(bytes32[] _proof, address _to, uint256 _amount) external nonpayable
 ```
 
 Allows a msg.sender to claim their MACRO token by providing a merkle proof proving their address is indeed committed to by the Merkle root stored in `Airdrop.merkleRoot`
@@ -127,6 +127,7 @@ Allows a msg.sender to claim their MACRO token by providing a merkle proof provi
 |---|---|---|
 | _proof | bytes32[] | An array of keccak hashes used to prove msg.sender&#39;s address is included in the Merkle tree represented by `Airdrop.merkleRoot` |
 | _to | address | The address the claimed MACRO should be sent to |
+| _amount | uint256 | undefined |
 
 ### merkleRoot
 

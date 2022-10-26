@@ -85,8 +85,14 @@ contract Airdrop is Ownable {
     /// @param _proof An array of keccak hashes used to prove msg.sender's address
     /// is included in the Merkle tree represented by `Airdrop.merkleRoot`
     /// @param _to The address the claimed MACRO should be sent to
-    function merkleClaim(bytes32[] calldata _proof, address _to) external {
-        // TODO implement me!
+    function merkleClaim(bytes32[] calldata _proof, address _to, uint256 _amount) external {
+        require(!alreadyClaimed[_to], "Address has already claimed their tokens");
+
+        bytes32 leaf = toLeafFormat(_to, _amount);
+
+        require(merkleCheck(_proof, merkleRoot, leaf), "Wrong merkle proof");
+        alreadyClaimed[_to] = true;
+        macroToken.mint(_to, _amount);
     }
 
     /// @notice Causes `Airdrop.signatureClaim` to always revert
@@ -113,7 +119,26 @@ contract Airdrop is Ownable {
     /// @return A 32-byte hash, which is one of the leaves of the Merkle tree represented by
     /// `Airdrop.merkleRoot`
     function toLeafFormat(address _claimer, uint256 _amount) internal pure returns (bytes32) {
-        return keccak256(bytes(abi.encode(_claimer, _amount)));
+        return keccak256(abi.encodePacked(_claimer, _amount));
+    }
+
+
+    /// @dev Helper function for determining if the node is part of the merkle tree root.
+    /// @param proof A set of nodes at the same level
+    /// @param root The merkle tree root
+    /// @return node the specific node to be checked for inclusion
+    /// `Airdrop.merkleCheck`
+    function merkleCheck(bytes32[] memory proof, bytes32 root, bytes32 node) internal pure returns (bool) {
+
+        bytes32 hash = node;
+
+        //task mentioned this part could be the same as libraries
+        for(uint i = 0; i < proof.length; i++){
+            bytes32 elem = proof[i];
+            hash <= elem ? hash = keccak256(abi.encodePacked(hash, elem)) :
+            hash = keccak256(abi.encodePacked(elem, hash));
+        }
+        return hash == root;
     }
 
     event ECDSADisabled(address owner);

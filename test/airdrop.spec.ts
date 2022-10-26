@@ -35,6 +35,18 @@ describe("Airdrop", function () {
         await macroToken.addAirdropOwner(airdrop.address);
     })
 
+    describe("Minting tokens directly", () => {
+        it("Owner/deployer should mint token", async() => {
+
+            await expect(macroToken.mint(account2.address, 10)).to.emit(macroToken, 'Transfer')
+                .withArgs(ethers.constants.AddressZero, account2.address, 10);
+        }),
+            it("Non-owner should fail at minting token", async() => {
+
+                await expect(macroToken.connect(account2).mint(account2.address, 10)).to.be.revertedWith("ONLY_OWNER")
+            })
+    })
+
     describe("setup and disabling ECDSA", () => {
 
         it("should deploy correctly", async () => {
@@ -59,16 +71,17 @@ describe("Airdrop", function () {
     })
 
     describe("Signature claiming", () => {
-        it ("TODO", async () => {
+        it ("Airdrop when signing keys match correctly", async () => {
+
             /*
-           EIP712_DOMAIN = keccak256(abi.encode(
-               keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-               keccak256(bytes("MacroToken")),
-               keccak256(bytes("1")),
-               block.chainid,
-               address(this)
-           ));
-            */
+            EIP712_DOMAIN = keccak256(abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes("MacroToken")),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(this) //1
+            ));
+             */
 
             for(const [claimer, amount] of Object.entries(airdropList)) {
                 //EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)
@@ -98,6 +111,88 @@ describe("Airdrop", function () {
 
             }
 
-        })
+        }),
+            it ("Airdrop when signing keys do not match correctly", async () => {
+
+                /*
+                EIP712_DOMAIN = keccak256(abi.encode(
+                    keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                    keccak256(bytes("MacroToken")),
+                    keccak256(bytes("1")),
+                    block.chainid,
+                    address(this) //1
+                ));
+                 */
+
+                for(const [claimer, amount] of Object.entries(airdropList)) {
+                    //EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)
+                    const domain = {
+                        name: 'MacroToken',
+                        version: '1',
+                        chainId,
+                        verifyingContract: airdrop.address,
+                    };
+
+                    //Claim(address claimer,uint256 amount)
+                    const types = {
+                        Claim: [
+                            { name: 'claimer', type: 'address' },
+                            { name: 'amount', type: 'uint256' },
+                        ],
+                    };
+
+                    const values = { claimer, amount };
+
+                    //account2 is now the signer, different than the deployer
+                    const sig = await account1._signTypedData(domain, types, values);
+
+                    await expect(airdrop.signatureClaim(sig, claimer, amount))
+                        .to.be.revertedWith("Wrong Signature");
+
+                }
+
+            }),
+            it ("Duplicate airdrop to an address that already claimed", async () => {
+
+                /*
+                EIP712_DOMAIN = keccak256(abi.encode(
+                    keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                    keccak256(bytes("MacroToken")),
+                    keccak256(bytes("1")),
+                    block.chainid,
+                    address(this) //1
+                ));
+                 */
+
+                for(const [claimer, amount] of Object.entries(airdropList)) {
+                    //EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)
+                    const domain = {
+                        name: 'MacroToken',
+                        version: '1',
+                        chainId,
+                        verifyingContract: airdrop.address,
+                    };
+
+                    //Claim(address claimer,uint256 amount)
+                    const types = {
+                        Claim: [
+                            { name: 'claimer', type: 'address' },
+                            { name: 'amount', type: 'uint256' },
+                        ],
+                    };
+
+                    const values = { claimer, amount };
+
+                    //account2 is now the signer, different than the deployer
+                    const sig = await account2._signTypedData(domain, types, values);
+
+                    airdrop.signatureClaim(sig, claimer, amount);
+
+                    await expect(airdrop.signatureClaim(sig, claimer, amount))
+                        .to.be.revertedWith("Address has already claimed their tokens");
+                }
+
+            })
+
     })
 })
