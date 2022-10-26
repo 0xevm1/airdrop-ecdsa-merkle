@@ -2,6 +2,8 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import hre, { ethers } from "hardhat";
 import { Airdrop, ERC20, MacroToken } from "../typechain-types"
+import { MerkleTree } from "merkletreejs";
+import keccak256 from "keccak256";
 import airdropList from "./airdroplist.json"
 
 const provider = ethers.provider
@@ -12,8 +14,14 @@ let rest: SignerWithAddress[]
 let macroToken: MacroToken
 let airdrop: Airdrop
 let merkleRoot: string
+let merkleTree: MerkleTree
 
 const chainId = hre.network.config.chainId;
+
+//slice(2) ensures data length is correct
+function hashToken(address: string, amount: string) {
+    return Buffer.from(ethers.utils.solidityKeccak256(['address', 'uint256'], [address, amount]).slice(2), 'hex')
+}
 
 describe("Airdrop", function () {
     before(async () => {
@@ -22,9 +30,16 @@ describe("Airdrop", function () {
         macroToken = (await (await ethers.getContractFactory("MacroToken")).deploy("Macro Token", "MACRO")) as MacroToken
         await macroToken.deployed()
 
-        // TODO: The bytes32 value below is just a random hash in order to get the tests to pass.
         // You must create a merkle tree for testing, computes it root, then set it here
-        merkleRoot = "0x150d81d5384973959afe304312de1ccab6382a4dfd98f9211a32278bbafd016b"
+
+        merkleTree = new MerkleTree(Object.entries(airdropList).
+        map(participants => hashToken(...participants)), keccak256, {sortPairs: true});
+        merkleRoot = merkleTree.getHexRoot();
+
+        console.log(Object.entries(airdropList).map(participants => hashToken(...participants)));
+
+        //EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)
+
     })
 
     beforeEach(async () => {
@@ -65,9 +80,47 @@ describe("Airdrop", function () {
     })
 
     describe("Merkle claiming", () => {
-        it ("TODO", async () => {
-            throw new Error("TODO: add more tests here!")
-        })
+        it ("Airdrop when valid proof found", async () => {
+            for(const [claimer, amount] of Object.entries(airdropList)){
+
+                const proof = merkleTree.getHexProof(hashToken(claimer, amount))
+
+                console.log(claimer, ": ", amount);
+
+                //await expect(airdrop.merkleClaim(proof, claimer, amount)).to.be.revertedWith("Wrong merkle proof")
+
+                await expect(airdrop.merkleClaim(proof, claimer, amount))
+                    .to.emit(macroToken, 'Transfer')
+                    .withArgs(ethers.constants.AddressZero, claimer, amount);
+            }
+
+        }),
+            it ("Give error when duplicate claim attempted", async () => {
+                for(const [claimer, amount] of Object.entries(airdropList)){
+
+                    const proof = merkleTree.getHexProof(hashToken(claimer, amount))
+
+                    console.log(claimer, ": ", amount);
+
+                    await airdrop.merkleClaim(proof, claimer, amount);
+
+                    await expect(airdrop.merkleClaim(proof, claimer, amount)).to.be.revertedWith("Address has already claimed their tokens")
+                }
+
+            }),
+            it ("Give error when invalid proof found", async () => {
+
+                let claimer: string = account1.address;
+                let amount: string = "10";
+
+                const proof = merkleTree.getHexProof(hashToken(claimer, amount));
+
+                console.log(claimer, ": ", amount);
+
+                await expect(airdrop.merkleClaim(proof, claimer, amount)).to.be.revertedWith("Wrong merkle proof")
+
+            })
+
     })
 
     describe("Signature claiming", () => {
