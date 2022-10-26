@@ -1,4 +1,3 @@
-🚧 WIP - Not final submission yet
 
                                   ,~-.
                                  (  ' )-.          ,~'`-.
