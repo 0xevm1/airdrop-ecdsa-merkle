@@ -36,7 +36,6 @@ describe("Airdrop", function () {
         map(participants => hashToken(...participants)), keccak256, {sortPairs: true});
         merkleRoot = merkleTree.getHexRoot();
 
-        console.log(Object.entries(airdropList).map(participants => hashToken(...participants)));
 
         //EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)
 
@@ -47,14 +46,13 @@ describe("Airdrop", function () {
         airdrop = await (await ethers.getContractFactory("Airdrop")).deploy(merkleRoot, account2.address, macroToken.address)
         await airdrop.deployed()
 
-        await macroToken.addAirdropOwner(airdrop.address);
     })
 
     describe("Minting tokens directly", () => {
         it("Owner/deployer should mint token", async() => {
-
-            await expect(macroToken.mint(account2.address, 10)).to.emit(macroToken, 'Transfer')
-                .withArgs(ethers.constants.AddressZero, account2.address, 10);
+            //320 is all of the tokens allocated for airdrop participants
+            await expect(macroToken.mint(airdrop.address, 320)).to.emit(macroToken, 'Transfer')
+                .withArgs(ethers.constants.AddressZero, airdrop.address, 320);
         }),
             it("Non-owner should fail at minting token", async() => {
 
@@ -81,30 +79,33 @@ describe("Airdrop", function () {
 
     describe("Merkle claiming", () => {
         it ("Airdrop when valid proof found", async () => {
+            macroToken.mint(airdrop.address, 320)
+
             for(const [claimer, amount] of Object.entries(airdropList)){
 
                 const proof = merkleTree.getHexProof(hashToken(claimer, amount))
 
-                console.log(claimer, ": ", amount);
-
                 //await expect(airdrop.merkleClaim(proof, claimer, amount)).to.be.revertedWith("Wrong merkle proof")
+                //console.log("Claimer: ", claimer, ", Signer: ", rest.find(address => { return address.address === claimer }).address);
 
-                await expect(airdrop.merkleClaim(proof, claimer, amount))
+                await expect(airdrop.connect(rest.find(address => { return address.address === claimer })).merkleClaim(proof, claimer, amount))
                     .to.emit(macroToken, 'Transfer')
-                    .withArgs(ethers.constants.AddressZero, claimer, amount);
+                    .withArgs(airdrop.address, claimer, amount);
+
             }
+
 
         }),
             it ("Give error when duplicate claim attempted", async () => {
+                macroToken.mint(airdrop.address, 320)
+
                 for(const [claimer, amount] of Object.entries(airdropList)){
 
                     const proof = merkleTree.getHexProof(hashToken(claimer, amount))
 
-                    console.log(claimer, ": ", amount);
+                    await airdrop.connect(rest.find(address => { return address.address === claimer })).merkleClaim(proof, claimer, amount);
 
-                    await airdrop.merkleClaim(proof, claimer, amount);
-
-                    await expect(airdrop.merkleClaim(proof, claimer, amount)).to.be.revertedWith("Address has already claimed their tokens")
+                    await expect(airdrop.connect(rest.find(address => { return address.address === claimer })).merkleClaim(proof, claimer, amount)).to.be.revertedWith("Address has already claimed their tokens")
                 }
 
             }),
@@ -115,9 +116,7 @@ describe("Airdrop", function () {
 
                 const proof = merkleTree.getHexProof(hashToken(claimer, amount));
 
-                console.log(claimer, ": ", amount);
-
-                await expect(airdrop.merkleClaim(proof, claimer, amount)).to.be.revertedWith("Wrong merkle proof")
+                await expect(airdrop.connect(account1).merkleClaim(proof, claimer, amount)).to.be.revertedWith("Wrong merkle proof")
 
             })
 
@@ -125,7 +124,7 @@ describe("Airdrop", function () {
 
     describe("Signature claiming", () => {
         it ("Airdrop when signing keys match correctly", async () => {
-
+            macroToken.mint(airdrop.address, 320)
             /*
             EIP712_DOMAIN = keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
@@ -158,9 +157,9 @@ describe("Airdrop", function () {
                 //account2 is now the signer, different than the deployer
                 const sig = await account2._signTypedData(domain, types, values);
 
-                await expect(airdrop.signatureClaim(sig, claimer, amount))
+                await expect(airdrop.connect(rest.find(address => { return address.address === claimer })).signatureClaim(sig, claimer, amount))
                     .to.emit(macroToken, 'Transfer')
-                    .withArgs(ethers.constants.AddressZero, claimer, amount);
+                    .withArgs(airdrop.address, claimer, amount);
 
             }
 
@@ -199,14 +198,14 @@ describe("Airdrop", function () {
                     //account2 is now the signer, different than the deployer
                     const sig = await account1._signTypedData(domain, types, values);
 
-                    await expect(airdrop.signatureClaim(sig, claimer, amount))
+                    await expect(airdrop.connect(rest.find(address => { return address.address === claimer })).signatureClaim(sig, claimer, amount))
                         .to.be.revertedWith("Wrong Signature");
 
                 }
 
             }),
             it ("Duplicate airdrop to an address that already claimed", async () => {
-
+                macroToken.mint(airdrop.address, 320)
                 /*
                 EIP712_DOMAIN = keccak256(abi.encode(
                     keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
@@ -239,9 +238,9 @@ describe("Airdrop", function () {
                     //account2 is now the signer, different than the deployer
                     const sig = await account2._signTypedData(domain, types, values);
 
-                    airdrop.signatureClaim(sig, claimer, amount);
+                    airdrop.connect(rest.find(address => { return address.address === claimer })).signatureClaim(sig, claimer, amount);
 
-                    await expect(airdrop.signatureClaim(sig, claimer, amount))
+                    await expect(airdrop.connect(rest.find(address => { return address.address === claimer })).signatureClaim(sig, claimer, amount))
                         .to.be.revertedWith("Address has already claimed their tokens");
                 }
 

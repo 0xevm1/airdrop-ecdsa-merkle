@@ -97,7 +97,7 @@ true if a claimer is able to call `Airdrop.signatureClaim` without reverting, fa
 ### macroToken
 
 ```solidity
-function macroToken() external view returns (contract MacroToken)
+function macroToken() external view returns (contract IERC20)
 ```
 
 Address of the MACRO ERC20 token
@@ -109,7 +109,7 @@ Address of the MACRO ERC20 token
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | contract MacroToken | undefined |
+| _0 | contract IERC20 | undefined |
 
 ### merkleClaim
 

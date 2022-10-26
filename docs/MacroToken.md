@@ -10,22 +10,6 @@ A simple ERC20 token that will be distributed in an Airdrop
 
 ## Methods
 
-### addAirdropOwner
-
-```solidity
-function addAirdropOwner(address contractAddress) external nonpayable
-```
-
-
-
-
-
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| contractAddress | address | undefined |
-
 ### allowance
 
 ```solidity
@@ -191,27 +175,22 @@ function name() external view returns (string)
 |---|---|---|
 | _0 | string | undefined |
 
-### owners
+### owner
 
 ```solidity
-function owners(address) external view returns (bool)
+function owner() external view returns (address)
 ```
 
 
 
 
 
-#### Parameters
-
-| Name | Type | Description |
-|---|---|---|
-| _0 | address | undefined |
 
 #### Returns
 
 | Name | Type | Description |
 |---|---|---|
-| _0 | bool | undefined |
+| _0 | address | undefined |
 
 ### symbol
 

@@ -17,7 +17,7 @@ import "./MacroToken.sol";
 contract Airdrop is Ownable {
 
     /// @notice Address of the MACRO ERC20 token
-    MacroToken public immutable macroToken;
+    IERC20 public immutable macroToken;
 
     /// @notice A merkle proof used to prove inclusion in a set of airdrop claimer addresses.
     /// Claimers can provide a merkle proof using this merkle root and claim their airdropped
@@ -45,7 +45,7 @@ contract Airdrop is Ownable {
     bytes32 public constant SUPPORT_TYPEHASH = keccak256("Claim(address claimer,uint256 amount)");
 
     /// @notice Sets the necessary initial claimer verification data
-    constructor(bytes32 _root, address _signer, MacroToken _macroToken) {
+    constructor(bytes32 _root, address _signer, IERC20 _macroToken) {
         merkleRoot = _root;
         signer = _signer;
         macroToken = _macroToken;
@@ -73,7 +73,11 @@ contract Airdrop is Ownable {
         address addressCheck = ECDSA.recover(toTypedDataHash(_to, _amount), signature);
         require(addressCheck == signer, "Wrong Signature");
         alreadyClaimed[_to] = true;
-        macroToken.mint(_to, _amount);
+
+        //approving and revoking here for everyone uses a bit more gas, but is extra protection against attacks
+        macroToken.approve(address(this), _amount);
+        macroToken.transferFrom(address(this), _to, _amount);
+        macroToken.approve(address(this), 0);
 
     }
 
@@ -86,13 +90,17 @@ contract Airdrop is Ownable {
     /// is included in the Merkle tree represented by `Airdrop.merkleRoot`
     /// @param _to The address the claimed MACRO should be sent to
     function merkleClaim(bytes32[] calldata _proof, address _to, uint256 _amount) external {
-        require(!alreadyClaimed[_to], "Address has already claimed their tokens");
+        require(!alreadyClaimed[msg.sender], "Address has already claimed their tokens");
 
         bytes32 leaf = toLeafFormat(_to, _amount);
 
         require(merkleCheck(_proof, merkleRoot, leaf), "Wrong merkle proof");
-        alreadyClaimed[_to] = true;
-        macroToken.mint(_to, _amount);
+        alreadyClaimed[msg.sender] = true;
+
+        //approving and revoking here for everyone uses a bit more gas, but is extra protection against attacks
+        macroToken.approve(address(this), _amount);
+        macroToken.transferFrom(address(this), _to, _amount);
+        macroToken.approve(address(this), 0);
     }
 
     /// @notice Causes `Airdrop.signatureClaim` to always revert
