@@ -38,7 +38,7 @@ funded addresses to mint tokens for the whitelisted beneficiary.
 Computes Merkletree root from the whitelist, verifies it in the smart contract, instructing a mint to occur to the
 whitelisted beneficiary.
 
-![Code Coverage](https://github.com/0xevm1/airdrop-ecdsa-merkle/blob/main/airdrop-coverage.png)
+
 
 ### Setup
 
@@ -66,8 +66,12 @@ use:
 
 to see SSTORE and SLOAD analysis, how efficient we are with gas and storage in the EVM
 
+![Raw operation trace in EVM](https://github.com/0xevm1/airdrop-ecdsa-merkle/blob/main/airdrop-evm.png)
+
 use: 
 
 `npx hardhat coverage`
 
 to see how much the tests cover
+
+![Code Coverage](https://github.com/0xevm1/airdrop-ecdsa-merkle/blob/main/airdrop-coverage.png)
