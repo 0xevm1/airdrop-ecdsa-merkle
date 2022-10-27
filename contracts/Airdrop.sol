@@ -7,8 +7,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
 import "./MacroToken.sol";
 
-/// @title Airdrop
-/// @author Melvillian
+/// @title Wrapper Fi Token Distributor
+/// @author 0xEVM1
 /// @notice A contract for airdropping MACRO token which allows claimers to claim
 /// their tokens using either signatures, or a Merkle proof. Once quantum computers
 /// have broken ECDSA, an owner can turn off the ability to verify using ECDSA signatures
@@ -140,7 +140,6 @@ contract Airdrop is Ownable {
 
         bytes32 hash = node;
 
-        //task mentioned this part could be the same as libraries
         for(uint i = 0; i < proof.length; i++){
             bytes32 elem = proof[i];
             hash <= elem ? hash = keccak256(abi.encodePacked(hash, elem)) :
